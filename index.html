@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DETENTION: English Class Horror</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; background:#0a0a0f; color:#ddd; font-family:'Courier New',monospace; overflow:hidden; user-select:none; }
+  #game { width:100vw; height:100vh; display:flex; flex-direction:column; padding:10px; background:radial-gradient(circle at 50% 30%, #1a1a25 0%, #000 100%); }
+  #blackboard { background:#0d1f12; border:6px solid #4a3820; border-radius:8px; padding:12px; margin-bottom:10px; box-shadow:inset 0 0 40px rgba(0,0,0,0.9); }
+  #task-counter { color:#a0a070; font-size:13px; margin-bottom:6px; }
+  #question { color:#e8e8e8; font-size:17px; line-height:1.3; }
+  #input-area { background:#000; border:3px solid #444; color:#fff; font-size:22px; padding:10px; margin-bottom:8px; min-height:48px; border-radius:6px; word-break:break-all; }
+  #input-area::after { content:"▌"; animation:blink 0.7s infinite; color:#0f0; }
+  @keyframes blink { 50% { opacity:0; } }
+  #darkness-bar { width:100%; height:18px; background:#333; border-radius:9px; overflow:hidden; margin-bottom:4px; }
+  #darkness-fill { height:100%; width:0%; background:linear-gradient(90deg,#600,#f00); transition:width 0.4s; }
+  #darkness-text { text-align:center; font-size:11px; color:#999; margin-bottom:6px; }
+  #feedback { color:#ccc; font-size:14px; text-align:center; min-height:20px; margin-bottom:6px; }
+  #keyboard { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:5px; padding-bottom:5px; }
+  .kb-row { display:flex; justify-content:center; gap:4px; }
+  .key { background:#2a2a35; border:1px solid #444; color:#ddd; font-family:inherit; font-size:16px; font-weight:bold; padding:10px 0; border-radius:6px; flex:1; max-width:40px; cursor:pointer; touch-action:manipulation; }
+  .key:active { background:#900; }
+  .key.wide { max-width:80px; font-size:12px; }
+  .key.enter { background:#060; }
+  .key.delete { background:#600; }
+  #screamer { display:none; position:fixed; inset:0; background:#000; z-index:9999; align-items:center; justify-content:center; animation:shake 0.04s infinite; }
+  #screamer.active { display:flex; }
+  #screamer .face { width:80vmin; height:80vmin; position:relative; }
+  #screamer .head { width:100%; height:100%; background:radial-gradient(circle,#e0e0e0 40%,#808080 100%); border-radius:50%; box-shadow:0 0 80px #900, inset 0 0 60px #000; position:relative; }
+  #screamer .eye { width:18%; height:18%; background:#000; border-radius:50%; position:absolute; top:32%; box-shadow:inset 0 0 20px #f00; }
+  #screamer .eye.left { left:20%; }
+  #screamer .eye.right { right:20%; }
+  #screamer .pupil { width:55%; height:55%; background:radial-gradient(circle,#fff 0%,#f00 60%,#500 100%); border-radius:50%; position:absolute; top:22%; left:22%; animation:pulse 0.2s infinite; }
+  #screamer .mouth { width:55%; height:32%; background:#000; border-radius:50%; position:absolute; bottom:12%; left:22%; overflow:hidden; }
+  #screamer .teeth { width:100%; height:45%; background:repeating-linear-gradient(90deg,#eee 0,#eee 12px,#000 12px,#000 16px); position:absolute; top:0; }
+  #screamer-text { position:absolute; bottom:8%; width:100%; text-align:center; color:#f00; font-size:30px; font-weight:bold; text-shadow:0 0 20px #f00; animation:pulse 0.2s infinite; letter-spacing:3px; }
+  @keyframes shake { 0%{transform:translate(0,0);} 25%{transform:translate(-12px,8px);} 50%{transform:translate(10px,-10px);} 75%{transform:translate(-8px,12px);} 100%{transform:translate(0,0);} }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
+  #start-screen { position:fixed; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; padding:30px; text-align:center; }
+  #start-screen h1 { color:#900; font-size:38px; margin-bottom:25px; text-shadow:0 0 40px #900; letter-spacing:4px; }
+  #start-screen p { color:#aaa; font-size:15px; line-height:1.7; margin-bottom:35px; max-width:500px; }
+  #start-btn { background:#900; color:#fff; border:2px solid #f00; padding:18px 50px; font-size:22px; border-radius:8px; font-family:inherit; font-weight:bold; letter-spacing:2px; box-shadow:0 0 40px #900; }
+</style>
+</head>
+<body>
+<div id="start-screen">
+  <h1>DETENTION</h1>
+  <p>Ты остался после уроков.<br>Mrs. Blackwood не отпустит, пока ты не ответишь на все вопросы.<br><br><b style="color:#f00">Ошибёшься — она придёт.</b></p>
+  <button id="start-btn">НАЧАТЬ</button>
+</div>
+<div id="game">
+  <div id="blackboard"><div id="task-counter">Task 1 / 10</div><div id="question">Loading...</div></div>
+  <div id="input-area"></div>
+  <div id="darkness-bar"><div id="darkness-fill"></div></div>
+  <div id="darkness-text">DARKNESS: 0%</div>
+  <div id="feedback"></div>
+  <div id="keyboard"></div>
+</div>
+<div id="screamer">
+  <div class="face"><div class="head"><div class="eye left"><div class="pupil"></div></div><div class="eye right"><div class="pupil"></div></div><div class="mouth"><div class="teeth"></div></div></div></div>
+  <div id="screamer-text">SHE IS HERE</div>
+</div>
+<script>
+const TASKS=[
+{q:"She ___ (go) to school",a:"goes"},
+{q:"I saw ___ elephant",a:"an"},
+{q:"Yesterday he ___ (buy) a book",a:"bought"},
+{q:"I have ___ (be) to London",a:"been"},
+{q:"If I ___ (be) you...",a:"were"},
+{q:"The letter ___ (write) by Tom",a:"was"},
+{q:"There ___ some milk",a:"is"},
+{q:"He is good ___ football",a:"at"},
+{q:"This is ___ best day",a:"the"},
+{q:"They ___ (not like) it",a:"don't"}
+];
+const SCREAMER_TEXTS=["SHE IS HERE","BEHIND YOU","DON'T TURN","YOU ARE NEXT","SHE KNOWS","RUN","ERROR"];
+const WHISPERS=["Свет мигает...","Шёпот за спиной...","Дверь скрипнула...","Учительница улыбнулась шире...","Что-то упало под партой...","Часы остановились..."];
+let currentTask=0,darkness=0,userInput="";
+const startScreen=document.getElementById('start-screen'),startBtn=document.getElementById('start-btn'),questionEl=document.getElementById('question'),counterEl=document.getElementById('task-counter'),inputArea=document.getElementById('input-area'),feedbackEl=document.getElementById('feedback'),darknessFill=document.getElementById('darkness-fill'),darknessText=document.getElementById('darkness-text'),screamerEl=document.getElementById('screamer'),screamerText=document.getElementById('screamer-text'),keyboardEl=document.getElementById('keyboard');
+function playScreamSound(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sawtooth';osc.frequency.setValueAtTime(900,ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.9);gain.gain.setValueAtTime(0.3,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.9);osc.start();osc.stop(ctx.currentTime+0.9);}catch(e){}}
+function showScreamer(){screamerText.textContent=SCREAMER_TEXTS[Math.floor(Math.random()*SCREAMER_TEXTS.length)];screamerEl.classList.add('active');playScreamSound();if(navigator.vibrate)navigator.vibrate([100,50,100,50,200]);setTimeout(()=>screamerEl.classList.remove('active'),1200);}
+function updateDarkness(){const p=Math.min(100,darkness);darknessFill.style.width=p+'%';darknessText.textContent='DARKNESS: '+p+'%';}
+function updateInput(){inputArea.textContent=userInput;}
+function showTask(){if(currentTask>=TASKS.length){questionEl.textContent="🎉 ALL TASKS DONE!";counterEl.textContent="END";return;}counterEl.textContent=`Task ${currentTask+1} / ${TASKS.length}`;questionEl.textContent=TASKS[currentTask].q;userInput="";updateInput();}
+function checkAnswer(){if(currentTask>=TASKS.length||!userInput)return;const correct=TASKS[currentTask].a.toLowerCase();if(userInput.toLowerCase().trim()===correct){feedbackEl.style.color='#6f6';feedbackEl.textContent='✅ Правильно... она отступает.';currentTask++;if(darkness>0)darkness-=5;updateDarkness();setTimeout(showTask,1000);}else{feedbackEl.style.color='#f44';feedbackEl.textContent=`❌ Неправильно. Ответ: ${TASKS[currentTask].a}`;darkness+=15;updateDarkness();showScreamer();userInput="";updateInput();setTimeout(()=>{feedbackEl.textContent='💀 '+WHISPERS[Math.floor(Math.random()*WHISPERS.length)];},1300);if(darkness>=100){setTimeout(()=>{questionEl.textContent='███ SHE TOOK YOU ███';counterEl.textContent='BAD ENDING';playScreamSound();if(navigator.vibrate)navigator.vibrate([300,100,300,100,500]);},2500);}}}
+function buildKeyboard(){const rows=["QWERTYUIOP".split(''),"ASDFGHJKL".split(''),"ZXCVBNM".split('')];keyboardEl.innerHTML='';rows.forEach(row=>{const rowDiv=document.createElement('div');rowDiv.className='kb-row';row.forEach(letter=>{const btn=document.createElement('button');btn.className='key';btn.textContent=letter;btn.addEventListener('click',()=>{if(userInput.length<30){userInput+=letter.toLowerCase();updateInput();}});rowDiv.appendChild(btn);});keyboardEl.appendChild(rowDiv);});const lastRow=document.createElement('div');lastRow.className='kb-row';const delBtn=document.createElement('button');delBtn.className='key wide delete';delBtn.textContent='DEL';delBtn.addEventListener('click',()=>{userInput=userInput.slice(0,-1);updateInput();});lastRow.appendChild(delBtn);const enterBtn=document.createElement('button');enterBtn.className='key wide enter';enterBtn.textContent='ENTER';enterBtn.addEventListener('click',checkAnswer);lastRow.appendChild(enterBtn);keyboardEl.appendChild(lastRow);}
+startBtn.addEventListener('click',()=>{startScreen.style.display='none';showTask();});
+buildKeyboard();updateDarkness();updateInput();
+</script>
+</body>
+</html>
